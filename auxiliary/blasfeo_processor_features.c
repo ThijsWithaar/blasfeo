@@ -169,6 +169,30 @@ int blasfeo_processor_cpu_features( int* features )
     // AVX2 is in the EBX register of leaf 7
     if( reg_ebx & bit_AVX2 )
         *features |= BLASFEO_PROCESSOR_FEATURE_AVX2;
+#elif defined(_WIN32)
+    #define bit_AVX 1<<28
+    #define bit_FMA 1<<12
+    #define bit_SSE3 1<<9
+    #define bit_AVX2 1<<5
+
+    typedef struct reg_s
+    {
+        unsigned int eax, ebx, ecx, edx;
+    } reg_t;
+    reg_t reg;
+    __cpuidex(&reg, 1, 0);
+
+    if (reg.ecx & bit_AVX)
+        *features |= BLASFEO_PROCESSOR_FEATURE_AVX;
+    if (reg.ecx & bit_FMA)
+        *features |= BLASFEO_PROCESSOR_FEATURE_FMA;
+    if (reg.ecx & bit_SSE3)
+        *features |= BLASFEO_PROCESSOR_FEATURE_SSE3;
+
+    __cpuidex(&reg, 7, 0);
+    if (reg.ebx & bit_AVX2)
+        *features |= BLASFEO_PROCESSOR_FEATURE_AVX2;
+
 #endif  // #if defined(__GNUC__) || defined(__clang__)
 
 #endif // x86 processors

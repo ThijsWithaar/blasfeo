@@ -240,8 +240,48 @@ endif()
 # set(CC_COMPILER x86_64-w64-mingw32-gcc)
 # set(CMAKE_C_COMPILER clang)
 if(CMAKE_C_COMPILER_ID MATCHES MSVC)
-	if(NOT ${TARGET} MATCHES GENERIC)
-		message( FATAL_ERROR "MSVC compiler only supported for TARGET=GENERIC")
+	#SET(ASM_DIALECT "-ATT")
+	SET(ASM_DIALECT "_NASM")
+	#SET(ASM_DIALECT "_MASM")
+	#SET(ASM_DIALECT "")
+	
+	if(ASM_DIALECT STREQUAL "_NASM")
+		set(CMAKE_ASM_NASM_COMPILER ${YASM})
+		#set(CMAKE_ASM_NASM_COMPILER ${GAS})
+		set(CMAKE_ASM_NASM_COMPILER_LIST ${CMAKE_ASM_NASM_COMPILER})
+	endif()
+
+	get_filename_component(GAS_PATH ${GAS} PATH)
+	set(CMAKE_ASM-ATT_COMPILER ${GAS_PATH})
+	set(CMAKE_ASM-ATT_COMPILER_LIST ${CMAKE_ASM-ATT_COMPILER})
+
+	#include(CMakeDetermineASMCompiler)
+
+	#include(CheckLanguage)
+	#check_language(ASM${ASM_DIALECT})
+	message("After check_language: ${CMAKE_ASM${ASM_DIALECT}_COMPILER}")
+	message("After check_language: ASM_DIALECT = ${ASM_DIALECT}")
+	
+	#enable_language(ASM)
+	enable_language(ASM${ASM_DIALECT})
+	
+	SET(CMAKE_ASM${ASM_DIALECT}_SOURCE_FILE_EXTENSIONS asm;S)
+	#set(CMAKE_ASM${ASM_DIALECT}_COMPILE_OBJECT "<CMAKE_ASM${ASM_DIALECT}_COMPILER> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>")
+	message("Asm ext: ${CMAKE_ASM${ASM_DIALECT}_SOURCE_FILE_EXTENSIONS}")
+	
+	#set(CMAKE_ASM_COMPILE_OBJECT ${CMAKE_ASM${ASM_DIALECT}_COMPILE_OBJECT})
+	message("After compile_object: ASM_DIALECT = ${ASM_DIALECT}")
+	
+
+	#SET(ASM_DIALECT "-ATT")
+	SET(ASM_DIALECT "_NASM")
+	set(CMAKE_ASM${ASM_DIALECT}_COMPILER ${GAS})
+	set(CMAKE_ASM${ASM_DIALECT}_COMPILE_OBJECT "<CMAKE_ASM${ASM_DIALECT}_COMPILER> <INCLUDES> -DOS_WINDOWS -o <OBJECT> -c <SOURCE>")
+	set(CMAKE_ASM_COMPILE_OBJECT "<CMAKE_ASM${ASM_DIALECT}_COMPILER> <INCLUDES> -DOS_WINDOWS -o <OBJECT> -c <SOURCE>")
+		
+	#include(CMakeTestASMCompiler)
+	if(NOT ${TARGET} MATCHES GENERIC AND NOT CMAKE_ASM${ASM_DIALECT}_COMPILER)
+		message( FATAL_ERROR "MSVC compiler requires gcc assembler for TARGET!=GENERIC")
 	endif()
 endif()
 
@@ -368,7 +408,8 @@ set(ASM_FLAGS_TARGET_GENERIC                "")
 
 if(${TARGET} MATCHES X64_AUTOMATIC)
 	include(${PROJECT_SOURCE_DIR}/cmake/X64AutomaticTargetSelection.cmake)
-	X64AutomaticTargetSelection()
+	#X64AutomaticTargetSelection()
+	set(TARGET X64_INTEL_HASWELL)
 	message(STATUS "Detected target ${TARGET}")
 else()
 	include(${PROJECT_SOURCE_DIR}/cmake/TestSingleTarget.cmake)
@@ -1099,12 +1140,27 @@ endif()
 
 
 
-
-
 #set(BLASFEO_SRC ${CMN_SRC} ${AUX_SRC} ${KERNEL_SRC} ${BLAS_SRC} ${EXT_SRC})
 
 # add library
 add_library(blasfeo ${BLASFEO_SRC})
+
+
+message("CMAKE_ASM${ASM_DIALECT}_COMPILER = ${CMAKE_ASM${ASM_DIALECT}_COMPILER}")
+if(DEFINED CMAKE_ASM${ASM_DIALECT}_COMPILER)
+	# Mark assembly files explicitly as nasm, should not be needed if above is done correctly
+	#message("BLASFEO_SRC = ${BLASFEO_SRC}")
+	foreach(BLASFEO_SRC_I ${BLASFEO_SRC})
+		get_filename_component(SRC_EXT ${BLASFEO_SRC_I} EXT)
+		#message("ASM file ${BLASFEO_SRC_I}, extension ${SRC_EXT}")
+		if(${SRC_EXT} STREQUAL ".S")
+			set_source_files_properties(${BLASFEO_SRC_I} PROPERTIES LANGUAGE ASM${ASM_DIALECT})
+			#set_source_files_properties(${BLASFEO_SRC_I} PROPERTIES LANGUAGE ASM)
+			message("File ${BLASFEO_SRC_I} is ASM${ASM_DIALECT}")
+		endif()
+	endforeach()
+endif()
+
 
 # 1) *XILINX_NONE_ELF*:
 #		Xilinx standalone (any core, e.g. A53,R5,..; *untested*)

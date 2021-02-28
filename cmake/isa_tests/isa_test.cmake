@@ -13,6 +13,10 @@
 #  CHKISA_TARGET_RUN   - True if the test ran without error
 function(TestISA TEST_TARGET)
 
+  #enable_language(ASM-NASM)
+  message("TestISA: CMAKE_ASM_NASM_COMPILER ${CMAKE_ASM_NASM_COMPILER}")
+  message("TestISA: CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS ${CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS}")
+
   # Pull in the tests each architecture needs to run
   include( ${PROJECT_SOURCE_DIR}/cmake/ArchitectureTests.cmake )
 
@@ -34,6 +38,8 @@ function(TestISA TEST_TARGET)
   # Populate the flags to use for the testing
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_FLAGS_TARGET_${TEST_TARGET}}")
   set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${ASM_FLAGS_TARGET_${TEST_TARGET}}")
+  
+  message("TestISA: CMAKE_ASM_FLAGS ${CMAKE_ASM_FLAGS}")
 
   if(${BLASFEO_CROSSCOMPILING})
     set(CHKISA_TARGET_RUN_${TEST_TARGET} "1")
@@ -45,6 +51,7 @@ function(TestISA TEST_TARGET)
       set(CMAKE_EXE_LINKER_FLAGS_INIT "--specs=nosys.specs")
     endif()
 
+    message("TestISA: try_compile")
     try_compile( CHKISA_TARGET_BUILD_${TEST_TARGET}                   # Variable to save the build result to
                  "${CMAKE_BINARY_DIR}/compilerTest/${TEST_TARGET}" # Directory to compile in
                  SOURCES ${CMP_CHECK_SRCS}                         # Source to compile
@@ -53,6 +60,19 @@ function(TestISA TEST_TARGET)
                  OUTPUT_VARIABLE CHK_OUTPUT_${TEST_TARGET}
                 )
   else()
+    message("TestISA: try_run")
+	GET_FILENAME_COMPONENT(reg_nasm "[HKEY_CURRENT_USER\\SOFTWARE\\nasm]" ABSOLUTE)
+	message("TestISA: registry nasm ${reg_nasm}")
+	message("TestISA: CMP_CHECK_SRCS ${CMP_CHECK_SRCS}")
+	enable_language(ASM_NASM)
+	set(CMAKE_ASM_COMPILER ${CMAKE_ASM_NASM_COMPILER})
+	SET(ASM_DIALECT "-NASM")
+	SET(CMAKE_ASM${ASM_DIALECT}_SOURCE_FILE_EXTENSIONS nasm;nas;asm;S)
+	set(SRC_AVX ${CMAKE_SOURCE_DIR}/cmake/isa_tests/TEST_AVX.S)
+	message("SRC_AVX ${SRC_AVX}")
+	set_source_files_properties(SRC_AVX PROPERTIES LANGUAGE ASM_NASM)
+	# %GAS% -c "C:\build\blasfeo\kernel\sse3\kernel_align_x64.S" -o "blasfeo.dir\Debug\kernel_align_x64.obj" -DOS_WINDOWS
+
     try_run( CHKISA_TARGET_RUN_${TEST_TARGET}                     # Variable to save the run result to
              CHKISA_TARGET_BUILD_${TEST_TARGET}                   # Variable to save the build result to
              "${CMAKE_BINARY_DIR}/compilerTest/${TEST_TARGET}" # Directory to compile in

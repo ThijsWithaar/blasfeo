@@ -13,10 +13,6 @@
 #  CHKISA_TARGET_RUN   - True if the test ran without error
 function(TestISA TEST_TARGET)
 
-  #enable_language(ASM-NASM)
-  message("TestISA: CMAKE_ASM_NASM_COMPILER ${CMAKE_ASM_NASM_COMPILER}")
-  message("TestISA: CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS ${CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS}")
-
   # Pull in the tests each architecture needs to run
   include( ${PROJECT_SOURCE_DIR}/cmake/ArchitectureTests.cmake )
 
@@ -29,7 +25,7 @@ function(TestISA TEST_TARGET)
 
   # Add the assembly test files and the compile definitions
   foreach(CHECK ${CMP_CHECK_${TEST_TARGET}})
-      list( APPEND CMP_CHECK_SRCS ${PROJECT_SOURCE_DIR}/cmake/isa_tests/${CHECK}.S )
+      list( APPEND CMP_CHECK_ASMS ${PROJECT_SOURCE_DIR}/cmake/isa_tests/${CHECK}.S )
       list( APPEND C_DEFS_CHK "-D${CHECK} " )
   endforeach()
 
@@ -53,30 +49,30 @@ function(TestISA TEST_TARGET)
 
     message("TestISA: try_compile")
     try_compile( CHKISA_TARGET_BUILD_${TEST_TARGET}                   # Variable to save the build result to
-                 "${CMAKE_BINARY_DIR}/compilerTest/${TEST_TARGET}" # Directory to compile in
-                 SOURCES ${CMP_CHECK_SRCS}                         # Source to compile
+                 "${CMAKE_BINARY_DIR}/compilerTest/${TEST_TARGET}"    # Directory to compile in
+                 SOURCES ${CMP_CHECK_SRCS} ${CMP_CHECK_ASMS}          # Source to compile
                  CMAKE_FLAGS
                    "-DCOMPILE_DEFINITIONS=${C_DEFS_CHK}"
                  OUTPUT_VARIABLE CHK_OUTPUT_${TEST_TARGET}
                 )
   else()
     message("TestISA: try_run")
-	GET_FILENAME_COMPONENT(reg_nasm "[HKEY_CURRENT_USER\\SOFTWARE\\nasm]" ABSOLUTE)
-	message("TestISA: registry nasm ${reg_nasm}")
-	message("TestISA: CMP_CHECK_SRCS ${CMP_CHECK_SRCS}")
-	enable_language(ASM_NASM)
-	set(CMAKE_ASM_COMPILER ${CMAKE_ASM_NASM_COMPILER})
-	SET(ASM_DIALECT "-NASM")
-	SET(CMAKE_ASM${ASM_DIALECT}_SOURCE_FILE_EXTENSIONS nasm;nas;asm;S)
-	set(SRC_AVX ${CMAKE_SOURCE_DIR}/cmake/isa_tests/TEST_AVX.S)
-	message("SRC_AVX ${SRC_AVX}")
-	set_source_files_properties(SRC_AVX PROPERTIES LANGUAGE ASM_NASM)
-	# %GAS% -c "C:\build\blasfeo\kernel\sse3\kernel_align_x64.S" -o "blasfeo.dir\Debug\kernel_align_x64.obj" -DOS_WINDOWS
+	if(DEFINED GAS)
+		foreach(BLASFEO_SRC_I ${CMP_CHECK_ASMS})
+			get_filename_component(ASM_SRC ${BLASFEO_SRC_I} NAME_WE)
+			set(OBJ_NAME ${CMAKE_CURRENT_BINARY_DIR}/gas_test/${ASM_SRC}.o)
+
+			message("GAS assembler: ${ASM_SRC})
+			execute_process(${GAS} "${CMAKE_ASM_FLAGS} -o ${OBJ_NAME} -c ${BLASFEO_SRC_I}")
+			list(APPEND CMP_CHECK_OBJS ${OBJ_NAME})
+		endforeach()
+		set(CMP_CHECK_ASMS ${CMP_CHECK_OBJS})
+	endif()
 
     try_run( CHKISA_TARGET_RUN_${TEST_TARGET}                     # Variable to save the run result to
              CHKISA_TARGET_BUILD_${TEST_TARGET}                   # Variable to save the build result to
-             "${CMAKE_BINARY_DIR}/compilerTest/${TEST_TARGET}" # Directory to compile in
-             SOURCES ${CMP_CHECK_SRCS}                         # Source to compile
+             "${CMAKE_BINARY_DIR}/compilerTest/${TEST_TARGET}"    # Directory to compile in
+             SOURCES ${CMP_CHECK_SRCS} ${CMP_CHECK_ASMS}          # Sources to compile
              CMAKE_FLAGS
               "-DCOMPILE_DEFINITIONS=${C_DEFS_CHK}"
              OUTPUT_VARIABLE CHK_OUTPUT_${TEST_TARGET}

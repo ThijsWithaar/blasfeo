@@ -49,7 +49,7 @@ void kernel_strmm_nt_ru_8x4_lib8(int kmax, float *alpha, float *A, float *B, flo
 	float
 		a_0, a_1, a_2, a_3,
 		a_4, a_5, a_6, a_7,
-		b_0, b_1, b_2, b_3;
+		b_0, b_1, b_2;
 
 #if defined(TARGET_GENERIC)
 	float CC[32] = {0};
@@ -193,7 +193,7 @@ void kernel_strmm_nt_ru_8x4_vs_lib8(int kmax, float *alpha, float *A, float *B, 
 	float
 		a_0, a_1, a_2, a_3,
 		a_4, a_5, a_6, a_7,
-		b_0, b_1, b_2, b_3;
+		b_0, b_1, b_2;
 
 #if defined(TARGET_GENERIC)
 	float CC[32] = {0};
